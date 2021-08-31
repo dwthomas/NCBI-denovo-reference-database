@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-from Bio import Entrez  
+from Bio import Entrez
 import progressbar
 import sys
-import pickle
-
 
 Entrez.email = sys.argv[1]
 Entrez.api_key = sys.argv[2]
@@ -51,11 +49,11 @@ def get_accesions(query):
         if retstart <= total:
             bar.update(retstart)
         else:
-            bar.update(total)    
+            bar.update(total)
         while retstart <= total:
-            handle = Entrez.esearch(db="nucleotide", 
+            handle = Entrez.esearch(db="nucleotide",
                                     retstart = retstart,
-                                    retmax=retmax, 
+                                    retmax=retmax,
                                     term="(((12S OR MiFish) OR mitochondrion) NOT chromosome) NOT shotgun",
                                     usehistory = "y",
                                     webenv = webenv,
@@ -145,7 +143,7 @@ def fetch_seq(accesion, webenv):
                     for i in range(len(accbatch)):
                         print(">" + accbatch[i], file = seqout)
                         print(seqs[retstart+i], file = seqout)
-            
+
                         print(accbatch[i], end = "\t", file = taxout)
                         print(taxids[retstart+i], file = taxout)
 
@@ -156,26 +154,23 @@ def fetch_seq(accesion, webenv):
                 bar.update(total)
     return taxids, seqs
 
-#accesions, webenv = get_accesions(query)
+accesions, webenv = get_accesions(query)
 already_got = []
 taxids = []
 with open("12Snmito.tax") as taxfile:
     for line in taxfile:
         already_got.append(line.split()[0])
         taxids.append(line.split()[1])
-#accesions = list(set(accesions) - set(already_got))
-#taxids, seqs = fetch_seq(accesions, webenv)
+accesions = list(set(accesions) - set(already_got))
+taxids, seqs = fetch_seq(accesions, webenv)
 tids = list(set(taxids))
 taxa_info = {}
-print(len(taxa_info), len(tids))
 taxa_info.update(fetch_taxa(tids))
 tids = list(set(tids) - set(taxa_info.keys()))
-#print(tids)
-with open('taxa_info.pickle', 'wb') as handle:
-        pickle.dump(taxa_info, handle)
+
 with open("12SnMito_full.tax", "wt") as ft:
     for i in range(len(taxids)):
-        if taxids[i] in taxa_info: 
+        if taxids[i] in taxa_info:
             print(already_got[i] + "\t" + taxa_info[taxids[i]], file = ft)
         else:
             try:
@@ -187,7 +182,7 @@ with open("12SnMito_full.tax", "wt") as ft:
                 print(already_got[i] + "\t" + list(gst.values())[0], file = ft)
             except:
                 print(already_got[i] + "\t" + already_got[i], file = ft)
-                
+
 
 
 print("Creating files")

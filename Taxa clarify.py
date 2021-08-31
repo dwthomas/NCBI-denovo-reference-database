@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
 
 import pandas as pd
 from Bio import SeqIO, pairwise2
@@ -17,40 +13,20 @@ import glob
 import threading
 from multiprocessing.pool import ThreadPool
 
-# In[ ]:
+taxa = pd.read_csv("./12SnMito_full.tax", sep = "\t", index_col = 0, names = ["Taxon"])
 
+to_drop = []
+to_keep = []
+for seq in SeqIO.parse("12Snmito.fasta", "fasta"):
+    l = len(seq)
+    if l < 100:
+        to_drop.append(seq.id)
+    else:
+        to_keep.append(seq)
+SeqIO.write(to_keep, "length_filtered_12SnMito.fasta", "fasta")
 
-#taxa = pd.read_csv("./12SnMito_full.tax", sep = "\t", index_col = 0, names = ["Taxon"])
-
-
-# In[ ]:
-
-
-#to_drop = []
-#to_keep = []
-#for seq in SeqIO.parse("12Snmito.fasta", "fasta"):
-#    l = len(seq)
-#    if l < 100:
-#        to_drop.append(seq.id)
-#    else:
-#        to_keep.append(seq)
-#SeqIO.write(to_keep, "length_filtered_12SnMito.fasta", "fasta")
-
-
-# In[ ]:
-
-
-#taxa = taxa.drop(to_drop)
-#taxa.to_csv("length_filtered_12SnMito.tax", sep = "\t")
-
-
-# In[ ]:
-
-
-#pairwise2.align.localms(seq[0], "ACG", 2, -1, -.5, -.1)
-
-
-# In[2]:
+taxa = taxa.drop(to_drop)
+taxa.to_csv("length_filtered_12SnMito.tax", sep = "\t")
 
 
 header = "query acc.ver, subject acc.ver, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score".split(", ")
@@ -68,7 +44,7 @@ def run_blast(query):
             os.makedirs(folder_path, exist_ok = True)
             SeqIO.write([query], subject_file_path, "fasta")
             command = [
-                "blastn", 
+                "blastn",
                 "-query", query_file_path,
                 "-subject", subject_file_path,
                 "-strand", "plus",
@@ -85,7 +61,7 @@ def run_blast(query):
         os.makedirs(folder_path, exist_ok = True)
         SeqIO.write([query], subject_file_path, "fasta")
         command = [
-            "blastn", 
+            "blastn",
             "-query", query_file_path,
             "-subject", subject_file_path,
             "-strand", "plus",
@@ -99,7 +75,7 @@ def run_blast(query):
         subprocess.run(command)
         best_hit = read_and_compress(output_file_path)
     if len(best_hit) > 0:
-        best_hit = best_hit.sort_values("evalue").iloc[0]  
+        best_hit = best_hit.sort_values("evalue").iloc[0]
         return query[best_hit["s. start"]:best_hit["s. end"]], best_hit["bit score"]
     else:
         return None, 0
@@ -110,7 +86,7 @@ def compress(name, data):
     with gzip.open(name + ".gz", "wt") as bgz:
         bgz.write(data)
     t.join()
-    
+
 def read_and_compress(bout, r=True):
     with open(bout) as btxt:
         btxt = btxt.read()
@@ -125,16 +101,6 @@ def read_and_compress(bout, r=True):
 def r_and_c(bout):
     read_and_compress(bout, r=False)
 
-
-# In[ ]:
-
-
-#bout, evalue = run_blast(seq)
-
-
-# In[3]:
-
-
 outseqs = []
 oute = []
 seqs = list(SeqIO.parse("length_filtered_12SnMito.fasta", "fasta"))
@@ -143,46 +109,3 @@ with ThreadPool(72) as pool:
 for o in out:
     outseqs.append(o[0])
     oute.append(o[1])
-
-
-# In[19]:
-
-
-
-
-
-# In[13]:
-
-
-
-
-
-# In[3]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
