@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-
+### https://github.com/dwthomas/MiFish-Reference-Database
 import pandas as pd
 from Bio import SeqIO, pairwise2
 from collections import Counter
+import sys
 import matplotlib.pyplot as plt
 import progressbar
 import os
@@ -13,29 +14,31 @@ import glob
 import threading
 from multiprocessing.pool import ThreadPool
 
-taxa = pd.read_csv("./12SnMito_full.tax", sep = "\t", index_col = 0, names = ["Taxon"])
+### eg: python taxa_clarify_klymus_all.py \
+#   klymus_full.tax \
+#   klymus_full.fasta \
+#   length_filtered_klymus_full \
+#   merged_sequences/dna-sequences.fasta \
+#   32 (number of threads to use)
 
-to_drop = []
-to_keep = []
-for seq in SeqIO.parse("12Snmito.fasta", "fasta"):
-    l = len(seq)
-    if l < 100:
-        to_drop.append(seq.id)
-    else:
-        to_keep.append(seq)
-SeqIO.write(to_keep, "length_filtered_12SnMito.fasta", "fasta")
+taxa_in = sys.argv[1]
+fasta_in = sys.argv[2]
+tag = sys.argv[3]
+merged_fasta = sys.argv[4]
+threads = sys.argv[5]
 
-taxa = taxa.drop(to_drop)
-taxa.to_csv("length_filtered_12SnMito.tax", sep = "\t")
-
+fasta_out = tag + '.trimmed.fasta'
+taxout = tag + ".tax"
+final_fasta = tag + "trimmed_final.fasta"
 
 header = "query acc.ver, subject acc.ver, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score".split(", ")
+
 def run_blast(query):
     id = query.id
     folder_path = "blastout/" + id + "/"
     subject_file_path = folder_path + "subject.fasta"
     output_file_path = folder_path + "blastout"
-    query_file_path = "./reference-seqs.fasta"
+    query_file_path = merged_fasta
     if os.path.exists(output_file_path+".gz"):
         try:
             with gzip.open(output_file_path+".gz", "rt") as btxt:
@@ -101,11 +104,33 @@ def read_and_compress(bout, r=True):
 def r_and_c(bout):
     read_and_compress(bout, r=False)
 
+taxa = pd.read_csv(taxa_in, sep = "\t", index_col = 0, names = ["Taxon"])
+
+to_drop = []
+to_keep = []
+for seq in SeqIO.parse(fasta_in, "fasta"):
+    l = len(seq)
+    if l < 100:
+        to_drop.append(seq.id)
+    else:
+        to_keep.append(seq)
+
+SeqIO.write(to_keep, fasta_out, "fasta")
+
+#causing error. Devin said to comment it out
+taxa = taxa.drop(to_drop)
+taxa.to_csv(taxout, sep = "\t", header=False)
+
 outseqs = []
 oute = []
-seqs = list(SeqIO.parse("length_filtered_12SnMito.fasta", "fasta"))
-with ThreadPool(72) as pool:
+
+seqs = list(SeqIO.parse(fasta_out, "fasta"))
+with ThreadPool(threads) as pool:
     out = pool.map(run_blast, seqs)
+
 for o in out:
-    outseqs.append(o[0])
-    oute.append(o[1])
+    if hasattr(o[0], 'id'):
+        outseqs.append(o[0])
+        oute.append(o[1])
+
+SeqIO.write(outseqs, final_fasta, "fasta")
